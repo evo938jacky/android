@@ -48,7 +48,7 @@ class GetSharesForFileOperationIT : AbstractOnServerIT() {
                 "",
                 OCShare.MAXIMUM_PERMISSIONS_FOR_FOLDER
             )
-                .execute(client).isSuccess
+                .execute(nextcloudClient).isSuccess
         )
 
         // share folder via public link
@@ -61,7 +61,7 @@ class GetSharesForFileOperationIT : AbstractOnServerIT() {
                 "",
                 OCShare.READ_PERMISSION_FLAG
             )
-                .execute(client).isSuccess
+                .execute(nextcloudClient).isSuccess
         )
 
         // share folder to group
@@ -74,12 +74,12 @@ class GetSharesForFileOperationIT : AbstractOnServerIT() {
                 "",
                 OCShare.NO_PERMISSION
             )
-                .execute(client).isSuccess
+                .execute(nextcloudClient).isSuccess
         )
 
-        val shareResult = GetSharesForFileOperation(remotePath, false, false, storageManager).execute(client)
+        val shareResult = GetSharesForFileOperation(remotePath, false, false, storageManager).run(nextcloudClient)
         assertTrue(shareResult.isSuccess)
 
-        assertEquals(3, (shareResult.data as ArrayList<OCShare>).size)
+        assertEquals(3, (shareResult.resultData.size))
     }
 }

@@ -21,9 +21,9 @@
 
 package com.owncloud.android.operations;
 
+import com.nextcloud.common.NextcloudClient;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
-import com.owncloud.android.lib.common.OwnCloudClient;
 import com.owncloud.android.lib.common.operations.RemoteOperationResult;
 import com.owncloud.android.lib.common.operations.RemoteOperationResult.ResultCode;
 import com.owncloud.android.lib.common.utils.Log_OC;
@@ -54,8 +54,8 @@ public class UnshareOperation extends SyncOperation {
     }
 
     @Override
-    protected RemoteOperationResult run(OwnCloudClient client) {
-        RemoteOperationResult result;
+    public RemoteOperationResult<List<OCShare>> run(NextcloudClient client) {
+        RemoteOperationResult<List<OCShare>> result;
 
         // Get Share for a file
         OCShare share = getStorageManager().getShareById(shareId);
@@ -90,13 +90,13 @@ public class UnshareOperation extends SyncOperation {
             }
 
         } else {
-            result = new RemoteOperationResult(ResultCode.SHARE_NOT_FOUND);
+            result = new RemoteOperationResult<>(ResultCode.SHARE_NOT_FOUND);
         }
 
         return result;
     }
 
-    private boolean existsFile(OwnCloudClient client, String remotePath) {
+    private boolean existsFile(NextcloudClient client, String remotePath) {
         return new ExistenceCheckRemoteOperation(remotePath, false).execute(client).isSuccess();
     }
 }

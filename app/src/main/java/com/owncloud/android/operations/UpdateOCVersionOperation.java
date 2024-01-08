@@ -24,7 +24,8 @@ import android.accounts.AccountManager;
 import android.content.Context;
 
 import com.nextcloud.client.account.User;
-import com.owncloud.android.lib.common.OwnCloudClient;
+import com.nextcloud.common.NextcloudClient;
+import com.nextcloud.operations.GetMethod;
 import com.owncloud.android.lib.common.accounts.AccountUtils.Constants;
 import com.owncloud.android.lib.common.operations.RemoteOperation;
 import com.owncloud.android.lib.common.operations.RemoteOperationResult;
@@ -33,7 +34,6 @@ import com.owncloud.android.lib.common.utils.Log_OC;
 import com.owncloud.android.lib.resources.status.OwnCloudVersion;
 
 import org.apache.commons.httpclient.HttpStatus;
-import org.apache.commons.httpclient.methods.GetMethod;
 import org.json.JSONException;
 import org.json.JSONObject;
 
@@ -41,14 +41,14 @@ import org.json.JSONObject;
 /**
  * Remote operation that checks the version of an ownCloud server and stores it locally
  */
-public class UpdateOCVersionOperation extends RemoteOperation {
+public class UpdateOCVersionOperation extends RemoteOperation<Void> {
 
     private static final String TAG = UpdateOCVersionOperation.class.getSimpleName();
 
     private static final String STATUS_PATH = "/status.php";
 
     private final User user;
-    private Context mContext;
+    private final Context mContext;
     private OwnCloudVersion mOwnCloudVersion;
 
     public UpdateOCVersionOperation(User user, Context context) {
@@ -59,44 +59,35 @@ public class UpdateOCVersionOperation extends RemoteOperation {
     
     
     @Override
-    protected RemoteOperationResult run(OwnCloudClient client) {
+    public RemoteOperationResult<Void> run(NextcloudClient client) {
         AccountManager accountMngr = AccountManager.get(mContext); 
         String statUrl = accountMngr.getUserData(user.toPlatformAccount(), Constants.KEY_OC_BASE_URL);
         statUrl += STATUS_PATH;
-        RemoteOperationResult result = null;
-        GetMethod getMethod = null;
+        RemoteOperationResult<Void> result;
+        com.nextcloud.operations.GetMethod getMethod = null;
 
         String webDav = client.getFilesDavUri().toString();
 
         try {
-            getMethod = new GetMethod(statUrl);
-            int status = client.executeMethod(getMethod);
+            getMethod = new GetMethod(statUrl, false);
+            int status = client.execute(getMethod);
             if (status != HttpStatus.SC_OK) {
-                result = new RemoteOperationResult(false, getMethod);
-                client.exhaustResponse(getMethod.getResponseBodyAsStream());
+                result = new RemoteOperationResult<>(false, getMethod);
                 
             } else {
                 String response = getMethod.getResponseBodyAsString();
-                if (response != null) {
-                    JSONObject json = new JSONObject(response);
-                    if (json.getString("version") != null) {
+                JSONObject json = new JSONObject(response);
+                String version = json.getString("version");
+                mOwnCloudVersion = new OwnCloudVersion(version);
+                if (mOwnCloudVersion.isVersionValid()) {
+                    accountMngr.setUserData(user.toPlatformAccount(), Constants.KEY_OC_VERSION, mOwnCloudVersion.getVersion());
+                    Log_OC.d(TAG, "Got new OC version " + mOwnCloudVersion);
 
-                        String version = json.getString("version");
-                        mOwnCloudVersion = new OwnCloudVersion(version);
-                        if (mOwnCloudVersion.isVersionValid()) {
-                            accountMngr.setUserData(user.toPlatformAccount(), Constants.KEY_OC_VERSION, mOwnCloudVersion.getVersion());
-                            Log_OC.d(TAG, "Got new OC version " + mOwnCloudVersion);
+                    result = new RemoteOperationResult<>(ResultCode.OK);
 
-                            result = new RemoteOperationResult(ResultCode.OK);
-                            
-                        } else {
-                            Log_OC.w(TAG, "Invalid version number received from server: " + json.getString("version"));
-                            result = new RemoteOperationResult(RemoteOperationResult.ResultCode.BAD_OC_VERSION);
-                        }
-                    }
-                }
-                if (result == null) {
-                    result = new RemoteOperationResult(RemoteOperationResult.ResultCode.INSTANCE_NOT_CONFIGURED);
+                } else {
+                    Log_OC.w(TAG, "Invalid version number received from server: " + json.getString("version"));
+                    result = new RemoteOperationResult<>(RemoteOperationResult.ResultCode.BAD_OC_VERSION);
                 }
             }
 
@@ -104,11 +95,11 @@ public class UpdateOCVersionOperation extends RemoteOperation {
             Log_OC.i(TAG, "Check for update of Nextcloud server version at " + webDav + ": " + result.getLogMessage());
             
         } catch (JSONException e) {
-            result = new RemoteOperationResult(RemoteOperationResult.ResultCode.INSTANCE_NOT_CONFIGURED);
+            result = new RemoteOperationResult<>(RemoteOperationResult.ResultCode.INSTANCE_NOT_CONFIGURED);
             Log_OC.e(TAG, "Check for update of Nextcloud server version at " + webDav + ": " + result.getLogMessage(), e);
                 
         } catch (Exception e) {
-            result = new RemoteOperationResult(e);
+            result = new RemoteOperationResult<>(e);
             Log_OC.e(TAG, "Check for update of Nextcloud server version at " + webDav + ": " + result.getLogMessage(), e);
             
         } finally {

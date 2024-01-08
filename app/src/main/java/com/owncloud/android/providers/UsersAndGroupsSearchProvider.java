@@ -38,6 +38,7 @@ import android.widget.Toast;
 
 import com.nextcloud.client.account.User;
 import com.nextcloud.client.account.UserAccountManager;
+import com.nextcloud.client.network.ClientFactory;
 import com.owncloud.android.R;
 import com.owncloud.android.datamodel.ArbitraryDataProvider;
 import com.owncloud.android.datamodel.ArbitraryDataProviderImpl;
@@ -117,6 +118,9 @@ public class UsersAndGroupsSearchProvider extends ContentProvider {
     @Inject
     protected UserAccountManager accountManager;
 
+    @Inject
+    protected ClientFactory clientFactory;
+
     private static final Map<String, ShareType> sShareTypes = new HashMap<>();
 
     public static ShareType getShareType(String authority) {
@@ -187,12 +191,17 @@ public class UsersAndGroupsSearchProvider extends ContentProvider {
 
         int match = mUriMatcher.match(uri);
         if (match == SEARCH) {
-            return searchForUsersOrGroups(uri);
+            try {
+                return searchForUsersOrGroups(uri);
+            } catch (ClientFactory.CreationException e) {
+                Log_OC.e(this, "Cannot create client", e);
+                return null;
+            }
         }
         return null;
     }
 
-    private Cursor searchForUsersOrGroups(Uri uri) {
+    private Cursor searchForUsersOrGroups(Uri uri) throws ClientFactory.CreationException {
         String lastPathSegment = uri.getLastPathSegment();
 
         if (lastPathSegment == null) {
@@ -208,7 +217,7 @@ public class UsersAndGroupsSearchProvider extends ContentProvider {
         // request to the OC server about users and groups matching userQuery
         GetShareesRemoteOperation searchRequest = new GetShareesRemoteOperation(userQuery, REQUESTED_PAGE,
                                                                                 RESULTS_PER_PAGE);
-        RemoteOperationResult result = searchRequest.execute(user, getContext());
+        RemoteOperationResult result = searchRequest.run(clientFactory.createNextcloudClient(user));
         List<JSONObject> names = new ArrayList<>();
 
         if (result.isSuccess()) {

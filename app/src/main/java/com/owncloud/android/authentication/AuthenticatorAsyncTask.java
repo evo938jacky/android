@@ -25,7 +25,6 @@ import android.net.Uri;
 import android.os.AsyncTask;
 
 import com.nextcloud.common.NextcloudClient;
-import com.owncloud.android.lib.common.OwnCloudClient;
 import com.owncloud.android.lib.common.OwnCloudClientFactory;
 import com.owncloud.android.lib.common.OwnCloudCredentials;
 import com.owncloud.android.lib.common.UserInfo;
@@ -65,7 +64,7 @@ public class AuthenticatorAsyncTask extends AsyncTask<Object, Void, RemoteOperat
 
             // Client
             Uri uri = Uri.parse(url);
-            NextcloudClient nextcloudClient = OwnCloudClientFactory.createNextcloudClient(uri,
+            NextcloudClient client = OwnCloudClientFactory.createNextcloudClient(uri,
                                                                                           credentials.getUsername(),
                                                                                           credentials.toOkHttpCredentials(),
                                                                                           context,
@@ -73,16 +72,12 @@ public class AuthenticatorAsyncTask extends AsyncTask<Object, Void, RemoteOperat
 
 
             // Operation - get display name
-            RemoteOperationResult<UserInfo> userInfoResult = new GetUserInfoRemoteOperation().execute(nextcloudClient);
+            RemoteOperationResult<UserInfo> userInfoResult = new GetUserInfoRemoteOperation().execute(client);
 
             // Operation - try credentials
             if (userInfoResult.isSuccess()) {
-                OwnCloudClient client = OwnCloudClientFactory.createOwnCloudClient(uri, context, true);
-                client.setUserId(userInfoResult.getResultData().getId());
-                client.setCredentials(credentials);
-
                 ExistenceCheckRemoteOperation operation = new ExistenceCheckRemoteOperation(ROOT_PATH, SUCCESS_IF_ABSENT);
-                result = operation.execute(client);
+                result = (RemoteOperationResult) operation.execute(client);
 
                 if (operation.wasRedirected()) {
                     RedirectionPath redirectionPath = operation.getRedirectionPath();
@@ -95,7 +90,7 @@ public class AuthenticatorAsyncTask extends AsyncTask<Object, Void, RemoteOperat
                 result = userInfoResult;
             }
         } else {
-            result = new RemoteOperationResult(RemoteOperationResult.ResultCode.UNKNOWN_ERROR);
+            result = new RemoteOperationResult<>(RemoteOperationResult.ResultCode.UNKNOWN_ERROR);
         }
 
         return result;

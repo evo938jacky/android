@@ -25,9 +25,9 @@ package com.owncloud.android.operations;
 
 import android.text.TextUtils;
 
+import com.nextcloud.common.NextcloudClient;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
-import com.owncloud.android.lib.common.OwnCloudClient;
 import com.owncloud.android.lib.common.operations.RemoteOperationResult;
 import com.owncloud.android.lib.resources.files.FileUtils;
 import com.owncloud.android.lib.resources.shares.CreateShareRemoteOperation;
@@ -37,6 +37,7 @@ import com.owncloud.android.operations.common.SyncOperation;
 
 import java.util.Arrays;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -44,10 +45,10 @@ import java.util.Set;
  */
 public class CreateShareWithShareeOperation extends SyncOperation {
 
-    private String path;
-    private String shareeName;
-    private ShareType shareType;
-    private int permissions;
+    private final String path;
+    private final String shareeName;
+    private final ShareType shareType;
+    private final int permissions;
     private String noteMessage;
     private String sharePassword;
     private boolean hideFileDownload;
@@ -123,7 +124,7 @@ public class CreateShareWithShareeOperation extends SyncOperation {
     }
 
     @Override
-    protected RemoteOperationResult run(OwnCloudClient client) {
+    public RemoteOperationResult<List<OCShare>> run(NextcloudClient client) {
 
         CreateShareRemoteOperation operation = new CreateShareRemoteOperation(
             path,
@@ -135,11 +136,11 @@ public class CreateShareWithShareeOperation extends SyncOperation {
             noteMessage
         );
         operation.setGetShareDetails(true);
-        RemoteOperationResult result = operation.execute(client);
 
+        RemoteOperationResult<List<OCShare>> result = operation.execute(client);
 
-        if (result.isSuccess() && result.getData().size() > 0) {
-            OCShare share = (OCShare) result.getData().get(0);
+        if (result.isSuccess() && result.getResultData().size() > 0) {
+            OCShare share = result.getResultData().get(0);
 
             //once creating share link update other information
             UpdateShareInfoOperation updateShareInfoOperation = new UpdateShareInfoOperation(share, getStorageManager());
@@ -151,9 +152,9 @@ public class CreateShareWithShareeOperation extends SyncOperation {
             updateShareInfoOperation.setPermissions(permissions);
 
             //execute and save the result in database
-            RemoteOperationResult updateShareInfoResult = updateShareInfoOperation.execute(client);
-            if (updateShareInfoResult.isSuccess() && updateShareInfoResult.getData().size() > 0) {
-                OCShare shareUpdated = (OCShare) updateShareInfoResult.getData().get(0);
+            RemoteOperationResult<List<OCShare>> updateShareInfoResult = updateShareInfoOperation.run(client);
+            if (updateShareInfoResult.isSuccess() && updateShareInfoResult.getResultData().size() > 0) {
+                OCShare shareUpdated = updateShareInfoResult.getResultData().get(0);
                 updateData(shareUpdated);
             }
         }

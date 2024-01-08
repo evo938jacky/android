@@ -33,8 +33,11 @@ import com.owncloud.android.datamodel.DecryptedFolderMetadata;
 import com.owncloud.android.datamodel.FileDataStorageManager;
 import com.owncloud.android.datamodel.OCFile;
 import com.owncloud.android.lib.common.DirectEditing;
+import com.owncloud.android.lib.common.OwnCloudAccount;
 import com.owncloud.android.lib.common.OwnCloudClient;
 import com.owncloud.android.lib.common.OwnCloudClientFactory;
+import com.owncloud.android.lib.common.OwnCloudClientManager;
+import com.owncloud.android.lib.common.OwnCloudClientManagerFactory;
 import com.owncloud.android.lib.common.UserInfo;
 import com.owncloud.android.lib.common.accounts.AccountUtils;
 import com.owncloud.android.lib.common.operations.RemoteOperation;
@@ -221,14 +224,21 @@ public class RefreshFolderOperation extends RemoteOperation {
      * {@inheritDoc}
      */
     @Override
-    protected RemoteOperationResult run(OwnCloudClient client) {
+    public RemoteOperationResult run(OwnCloudClient client) {
         RemoteOperationResult result;
+        NextcloudClient nextcloudClient = null;
         mFailsInKeptInSyncFound = 0;
         mConflictsFound = 0;
         mForgottenLocalFiles.clear();
 
+        try {
+            OwnCloudClientManager ocClientManager= OwnCloudClientManagerFactory.getDefaultSingleton();
+            OwnCloudAccount ocAccount = new OwnCloudAccount(client.getBaseUri(), client.getCredentials());
+            nextcloudClient = ocClientManager.getNextcloudClientFor(ocAccount, mContext);
+        } catch (Exception ignored) {}
+
         if (OCFile.ROOT_PATH.equals(mLocalFolder.getRemotePath()) && !mSyncFullAccount && !mOnlyFileMetadata) {
-            updateOCVersion(client);
+            updateOCVersion(nextcloudClient);
             updateUserProfile();
         }
 
@@ -259,7 +269,7 @@ public class RefreshFolderOperation extends RemoteOperation {
         }
 
         if (result.isSuccess() && !mSyncFullAccount && !mOnlyFileMetadata) {
-            refreshSharesForFolder(client); // share result is ignored
+            refreshSharesForFolder(nextcloudClient); // share result is ignored
         }
 
         if (!mSyncFullAccount) {
@@ -272,9 +282,9 @@ public class RefreshFolderOperation extends RemoteOperation {
 
     }
 
-    private void updateOCVersion(OwnCloudClient client) {
+    private void updateOCVersion(NextcloudClient client) {
         UpdateOCVersionOperation update = new UpdateOCVersionOperation(user, mContext);
-        RemoteOperationResult result = update.execute(client);
+        RemoteOperationResult<Void> result = update.execute(client);
         if (result.isSuccess()) {
             // Update Capabilities for this account
             updateCapabilities();
@@ -688,8 +698,8 @@ public class RefreshFolderOperation extends RemoteOperation {
      * @return The result of the remote operation retrieving the Share resources in the folder refreshed by
      *                  the operation.
      */
-    private RemoteOperationResult refreshSharesForFolder(OwnCloudClient client) {
-        RemoteOperationResult result;
+    private RemoteOperationResult<List<OCShare>> refreshSharesForFolder(NextcloudClient client) {
+        RemoteOperationResult<List<OCShare>> result;
 
         // remote request
         GetSharesForFileRemoteOperation operation =
@@ -699,10 +709,7 @@ public class RefreshFolderOperation extends RemoteOperation {
         if (result.isSuccess()) {
             // update local database
             ArrayList<OCShare> shares = new ArrayList<>();
-            OCShare share;
-            for (Object obj : result.getData()) {
-                share = (OCShare) obj;
-
+            for (OCShare share : result.getResultData()) {
                 if (ShareType.NO_SHARED != share.getShareType()) {
                     shares.add(share);
                 }

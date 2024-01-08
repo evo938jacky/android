@@ -83,7 +83,7 @@ class FileDisplayActivityIT : AbstractOnServerIT() {
                 false,
                 "",
                 OCShare.MAXIMUM_PERMISSIONS_FOR_FOLDER
-            ).execute(client).isSuccess
+            ).execute(nextcloudClient).isSuccess
         )
 
         // share folder via public link
@@ -95,7 +95,7 @@ class FileDisplayActivityIT : AbstractOnServerIT() {
                 true,
                 "",
                 OCShare.READ_PERMISSION_FLAG
-            ).execute(client).isSuccess
+            ).execute(nextcloudClient).isSuccess
         )
 
         // share folder to group
@@ -107,7 +107,7 @@ class FileDisplayActivityIT : AbstractOnServerIT() {
                 false,
                 "",
                 OCShare.NO_PERMISSION
-            ).execute(client).isSuccess
+            ).execute(nextcloudClient).isSuccess
         )
 
         // share folder to circle
