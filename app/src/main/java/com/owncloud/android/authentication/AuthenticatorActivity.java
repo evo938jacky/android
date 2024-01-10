@@ -898,7 +898,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
      *
      * @param result Result of the check.
      */
-    private void onGetServerInfoFinish(RemoteOperationResult result) {
+    private void onGetServerInfoFinish(RemoteOperationResult<GetServerInfoOperation.ServerInfo> result) {
         /// update activity state
         mWaitingForOpId = Long.MAX_VALUE;
 
@@ -908,7 +908,7 @@ public class AuthenticatorActivity extends AccountAuthenticatorActivity
             //      2. server is installed
             //      3. we got the server version
             //      4. we got the authentication method required by the server
-            mServerInfo = (GetServerInfoOperation.ServerInfo) (result.getData().get(0));
+            mServerInfo = result.getResultData();
 
             // show outdated warning
             if (CapabilityUtils.checkOutdatedWarning(getResources(),
