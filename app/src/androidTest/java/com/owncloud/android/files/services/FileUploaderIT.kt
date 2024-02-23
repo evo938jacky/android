@@ -77,14 +77,15 @@ abstract class FileUploaderIT : AbstractOnServerIT() {
                 user,
                 null,
                 ocUpload,
-                FileUploader.NameCollisionPolicy.DEFAULT,
-                FileUploader.LOCAL_BEHAVIOUR_COPY,
+                NameCollisionPolicy.DEFAULT,
+                FileUploadWorker.LOCAL_BEHAVIOUR_COPY,
                 targetContext,
                 false,
-                false
+                false,
+                storageManager
             )
                 .setRemoteFolderToBeCreated()
-                .execute(client, storageManager)
+                .execute(client)
                 .isSuccess
         )
 
@@ -103,13 +104,14 @@ abstract class FileUploaderIT : AbstractOnServerIT() {
                 user,
                 null,
                 ocUpload2,
-                FileUploader.NameCollisionPolicy.OVERWRITE,
-                FileUploader.LOCAL_BEHAVIOUR_COPY,
+                NameCollisionPolicy.OVERWRITE,
+                FileUploadWorker.LOCAL_BEHAVIOUR_COPY,
                 targetContext,
                 false,
-                false
+                false,
+                storageManager
             )
-                .execute(client, storageManager)
+                .execute(client)
                 .isSuccess
         )
 
