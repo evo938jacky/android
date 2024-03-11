@@ -665,7 +665,6 @@ public class UploadFileOperation extends SyncOperation {
                     data.setFilename(mFile.getDecryptedFileName());
                     data.setMimetype(mFile.getMimeType());
                     data.setKey(EncryptionUtils.encodeBytesToBase64String(key));
-
                     decryptedFile.setEncrypted(data);
                     decryptedFile.setInitializationVector(EncryptionUtils.encodeBytesToBase64String(iv));
                     decryptedFile.setAuthenticationTag(encryptedFile.getAuthenticationTag());
